@@ -67,6 +67,19 @@
           <div class="tag-buttons">
             <button 
               type="button"
+              @click="clearTagFilter"
+              class="tag-filter-btn"
+              :class="{ active: !selectedTagId }"
+              :style="{ 
+                backgroundColor: !selectedTagId ? '#6c757d' : '#e9ecef',
+                borderColor: '#6c757d',
+                color: !selectedTagId ? '#fff' : '#6c757d'
+              }"
+            >
+              All
+            </button>
+            <button 
+              type="button"
               v-for="tag in chatStore.tags" 
               :key="tag.id"
               @click="filterByTag(tag.id)"
@@ -119,12 +132,12 @@
             </div>
           </div>
           
-          <div v-if="chatStore.conversations.length === 0" class="empty-state">
+          <div v-if="displayConversations.length === 0" class="empty-state">
             <div class="empty-icon">💬</div>
-            <h3>No conversations yet</h3>
-            <p>Start a new conversation to begin chatting</p>
+            <h3>{{ selectedTagId ? 'No conversations with this tag' : 'No conversations yet' }}</h3>
+            <p>{{ selectedTagId ? 'Try selecting a different tag or create a new conversation' : 'Start a new conversation to begin chatting' }}</p>
             <button @click="createNewConversation" class="btn btn-primary">
-              Create Your First Conversation
+              {{ selectedTagId ? 'Create New Conversation' : 'Create Your First Conversation' }}
             </button>
           </div>
         </div>

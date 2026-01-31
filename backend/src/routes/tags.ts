@@ -5,15 +5,19 @@ import {
   createTag, 
   updateTag, 
   deleteTag, 
-  getConversationsByTag 
+  getConversationsByTag,
+  createTagValidation,
+  updateTagValidation,
+  deleteTagValidation,
+  getConversationsByTagValidation
 } from '../controllers/tagController';
 
 const router = Router();
 
 router.get('/', authenticateToken, getTags);
-router.post('/', authenticateToken, createTag);
-router.put('/:id', authenticateToken, updateTag);
-router.delete('/:id', authenticateToken, deleteTag);
-router.get('/:tagId/conversations', authenticateToken, getConversationsByTag);
+router.post('/', createTagValidation, authenticateToken, createTag);
+router.put('/:id', updateTagValidation, authenticateToken, updateTag);
+router.delete('/:id', deleteTagValidation, authenticateToken, deleteTag);
+router.get('/:tagId/conversations', getConversationsByTagValidation, authenticateToken, getConversationsByTag);
 
 export default router;

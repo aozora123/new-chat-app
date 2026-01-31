@@ -1,5 +1,99 @@
 import { Request, Response } from 'express';
+import { body, param, validationResult } from 'express-validator';
 import { Conversation, Message, Tag, GroupMember, User, ConversationTag } from '../models';
+import { Op } from 'sequelize';
+import { sequelize } from '../config/database';
+import logger from '../config/logger';
+
+// 验证规则
+export const getConversationByIdValidation = [
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('Conversation ID must be a positive integer')
+];
+
+export const addTagToConversationValidation = [
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('Conversation ID must be a positive integer'),
+  body('tagId')
+    .isInt({ min: 1 })
+    .withMessage('Tag ID must be a positive integer')
+];
+
+export const removeTagFromConversationValidation = [
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('Conversation ID must be a positive integer'),
+  body('tagId')
+    .isInt({ min: 1 })
+    .withMessage('Tag ID must be a positive integer')
+];
+
+export const createConversationValidation = [
+  body('title')
+    .trim()
+    .notEmpty()
+    .withMessage('Conversation title is required')
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Conversation title must be between 1 and 100 characters'),
+  body('isGroup')
+    .optional()
+    .isBoolean()
+    .withMessage('isGroup must be a boolean value')
+];
+
+export const updateConversationValidation = [
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('Conversation ID must be a positive integer'),
+  body('title')
+    .trim()
+    .notEmpty()
+    .withMessage('Conversation title is required')
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Conversation title must be between 1 and 100 characters')
+];
+
+export const deleteConversationValidation = [
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('Conversation ID must be a positive integer')
+];
+
+export const addMemberToGroupValidation = [
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('Conversation ID must be a positive integer'),
+  body('memberId')
+    .isInt({ min: 1 })
+    .withMessage('Member ID must be a positive integer')
+];
+
+export const addBotToGroupValidation = [
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('Conversation ID must be a positive integer'),
+  body('botType')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Bot type must not exceed 50 characters')
+];
+
+// 验证结果处理
+const handleValidationErrors = (req: Request, res: Response): boolean => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    logger.warn('Validation errors', { errors: errors.array(), path: req.path });
+    res.status(400).json({ 
+      error: 'Validation failed', 
+      details: errors.array() 
+    });
+    return true;
+  }
+  return false;
+};
 
 // 预设机器人角色配置
 export const BOT_ROLES = [
@@ -52,7 +146,16 @@ export const getConversations = async (req: Request, res: Response) => {
     }
 
     const conversations = await Conversation.findAll({
-      where: { userId },
+      where: {
+        [Op.or]: [
+          { userId },
+          {
+            id: {
+              [Op.in]: sequelize.literal(`(SELECT conversationId FROM GroupMembers WHERE userId = ${userId} AND memberType = 'human')`)
+            }
+          }
+        ]
+      },
       include: [
         { model: Message, as: 'Messages', limit: 1, order: [['createdAt', 'DESC']] },
         { model: Tag, as: 'Tags' },
@@ -73,6 +176,9 @@ export const getConversations = async (req: Request, res: Response) => {
 
 export const addTagToConversation = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { id } = req.params;
     const { tagId } = req.body;
     const userId = req.userId;
@@ -126,6 +232,9 @@ export const addTagToConversation = async (req: Request, res: Response) => {
 
 export const removeTagFromConversation = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { id } = req.params;
     const { tagId } = req.body;
     const userId = req.userId;
@@ -160,6 +269,9 @@ export const removeTagFromConversation = async (req: Request, res: Response) => 
 
 export const getConversationById = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { id } = req.params;
     const userId = req.userId;
 
@@ -196,8 +308,13 @@ export const getConversationById = async (req: Request, res: Response) => {
 
 export const createConversation = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { title, isGroup } = req.body;
     const userId = req.userId;
+    
+    logger.info('Create conversation request received', { title: title.substring(0, 30) + (title.length > 30 ? '...' : ''), isGroup });
 
     console.log('Creating conversation:', { title, isGroup, userId });
     console.log('isGroup type:', typeof isGroup, 'isGroup value:', isGroup);
@@ -222,9 +339,14 @@ export const createConversation = async (req: Request, res: Response) => {
 
 export const updateConversation = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { id } = req.params;
     const { title } = req.body;
     const userId = req.userId;
+    
+    logger.info('Update conversation request received', { conversationId: id, title: title.substring(0, 30) + (title.length > 30 ? '...' : '') });
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -250,8 +372,13 @@ export const updateConversation = async (req: Request, res: Response) => {
 
 export const deleteConversation = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { id } = req.params;
     const userId = req.userId;
+    
+    logger.info('Delete conversation request received', { conversationId: id });
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -297,9 +424,14 @@ export const deleteConversation = async (req: Request, res: Response) => {
 
 export const addMemberToGroup = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { id } = req.params;
     const { memberId } = req.body;
     const userId = req.userId;
+    
+    logger.info('Add member to group request received', { conversationId: id, memberId });
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -350,9 +482,14 @@ export const addMemberToGroup = async (req: Request, res: Response) => {
 
 export const addBotToGroup = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { id } = req.params;
     const { botType } = req.body;
     const userId = req.userId;
+    
+    logger.info('Add bot to group request received', { conversationId: id, botType });
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });

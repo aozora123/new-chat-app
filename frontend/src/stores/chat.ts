@@ -153,10 +153,10 @@ export const useChatStore = defineStore('chat', {
         if (this.currentConversation && this.currentConversation.id === conversationId) {
           this.messages.push(response.data.userMessage);
           
-          // Poll for new messages after a delay to get AI/bot responses
+          // Poll for new messages after a delay to get AI/bot responses (optimized for faster response)
           setTimeout(async () => {
             await this.loadMessages(conversationId);
-          }, 1500);
+          }, 500);
         }
 
         return response.data;

@@ -7,6 +7,6 @@ const dbPassword = process.env.DB_PASSWORD || 'password';
 export const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
   host: process.env.DB_HOST || 'localhost',
   dialect: 'sqlite',
-  storage: './database.sqlite',
+  storage: './db.sqlite3',
   logging: false, // Set to console.log to see SQL queries
 });

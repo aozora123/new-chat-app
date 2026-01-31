@@ -1,5 +1,63 @@
 import { Request, Response } from 'express';
+import { body, param, validationResult } from 'express-validator';
 import { Tag, Conversation, ConversationTag, Message } from '../models';
+import logger from '../config/logger';
+
+// 验证规则
+export const createTagValidation = [
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Tag name is required')
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Tag name must be between 1 and 50 characters'),
+  body('color')
+    .optional()
+    .matches(/^#[0-9A-F]{6}$/i)
+    .withMessage('Color must be a valid hex color code')
+];
+
+export const updateTagValidation = [
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('Tag ID must be a positive integer'),
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Tag name is required')
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Tag name must be between 1 and 50 characters'),
+  body('color')
+    .optional()
+    .matches(/^#[0-9A-F]{6}$/i)
+    .withMessage('Color must be a valid hex color code')
+];
+
+export const deleteTagValidation = [
+  param('id')
+    .isInt({ min: 1 })
+    .withMessage('Tag ID must be a positive integer')
+];
+
+export const getConversationsByTagValidation = [
+  param('tagId')
+    .isInt({ min: 1 })
+    .withMessage('Tag ID must be a positive integer')
+];
+
+// 验证结果处理
+const handleValidationErrors = (req: Request, res: Response): boolean => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    logger.warn('Validation errors', { errors: errors.array(), path: req.path });
+    res.status(400).json({ 
+      error: 'Validation failed', 
+      details: errors.array() 
+    });
+    return true;
+  }
+  return false;
+};
 
 export const getTags = async (req: Request, res: Response) => {
   try {
@@ -21,8 +79,13 @@ export const getTags = async (req: Request, res: Response) => {
 
 export const createTag = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { name, color } = req.body;
     const userId = req.userId;
+    
+    logger.info('Create tag request received', { name, color });
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -42,9 +105,14 @@ export const createTag = async (req: Request, res: Response) => {
 
 export const updateTag = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { id } = req.params;
     const { name, color } = req.body;
     const userId = req.userId;
+    
+    logger.info('Update tag request received', { tagId: id, name, color });
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -70,8 +138,13 @@ export const updateTag = async (req: Request, res: Response) => {
 
 export const deleteTag = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { id } = req.params;
     const userId = req.userId;
+    
+    logger.info('Delete tag request received', { tagId: id });
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -102,8 +175,13 @@ export const deleteTag = async (req: Request, res: Response) => {
 
 export const getConversationsByTag = async (req: Request, res: Response) => {
   try {
+    // 检查验证错误
+    if (handleValidationErrors(req, res)) return;
+    
     const { tagId } = req.params;
     const userId = req.userId;
+    
+    logger.info('Get conversations by tag request received', { tagId });
 
     console.log('getConversationsByTag called with tagId:', tagId, 'userId:', userId);
 

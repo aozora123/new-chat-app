@@ -44,9 +44,11 @@ interface ConversationAttributes {
   title: string;
   userId: number;
   isGroup: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-interface ConversationCreationAttributes extends Optional<ConversationAttributes, 'id'> {}
+interface ConversationCreationAttributes extends Optional<ConversationAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
 
 export interface ConversationInstance extends Model<ConversationAttributes, ConversationCreationAttributes>, ConversationAttributes {}
 
@@ -73,6 +75,22 @@ export const Conversation = sequelize.define<ConversationInstance, ConversationA
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  createdAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  }
+}, {
+  indexes: [
+    { fields: ['userId', 'updatedAt'] },
+    { fields: ['userId', 'isGroup'] },
+    { fields: ['updatedAt'] }
+  ]
 });
 
 // Message model
@@ -80,11 +98,13 @@ interface MessageAttributes {
   id: number;
   content: string;
   senderType: 'user' | 'ai' | 'bot';
-  senderId?: number;
+  senderId?: number | null;
   conversationId: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-interface MessageCreationAttributes extends Optional<MessageAttributes, 'id'> {}
+interface MessageCreationAttributes extends Optional<MessageAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
 
 export interface MessageInstance extends Model<MessageAttributes, MessageCreationAttributes>, MessageAttributes {}
 
@@ -115,6 +135,22 @@ export const Message = sequelize.define<MessageInstance, MessageAttributes>('Mes
     },
     onDelete: 'CASCADE',
   },
+  createdAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  }
+}, {
+  indexes: [
+    { fields: ['conversationId', 'createdAt'] },
+    { fields: ['senderId', 'senderType'] },
+    { fields: ['conversationId', 'senderType', 'createdAt'] }
+  ]
 });
 
 // Tag model
@@ -123,9 +159,11 @@ interface TagAttributes {
   name: string;
   userId: number;
   color: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-interface TagCreationAttributes extends Optional<TagAttributes, 'id'> {}
+interface TagCreationAttributes extends Optional<TagAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
 
 export interface TagInstance extends Model<TagAttributes, TagCreationAttributes>, TagAttributes {}
 
@@ -153,6 +191,21 @@ export const Tag = sequelize.define<TagInstance, TagAttributes>('Tag', {
     allowNull: false,
     defaultValue: '#007bff',
   },
+  createdAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  }
+}, {
+  indexes: [
+    { fields: ['userId', 'name'] },
+    { fields: ['userId'] }
+  ]
 });
 
 // GroupMember model for managing group membership
@@ -162,9 +215,11 @@ interface GroupMemberAttributes {
   userId?: number;
   memberType: 'human' | 'bot';
   botType?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-interface GroupMemberCreationAttributes extends Optional<GroupMemberAttributes, 'id'> {}
+interface GroupMemberCreationAttributes extends Optional<GroupMemberAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
 
 export interface GroupMemberInstance extends Model<GroupMemberAttributes, GroupMemberCreationAttributes>, GroupMemberAttributes {}
 
@@ -200,6 +255,23 @@ export const GroupMember = sequelize.define<GroupMemberInstance, GroupMemberAttr
     type: DataTypes.STRING,
     allowNull: true,
   },
+  createdAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  }
+}, {
+  indexes: [
+    { fields: ['conversationId'] },
+    { fields: ['userId'] },
+    { fields: ['conversationId', 'memberType'] },
+    { fields: ['conversationId', 'memberType', 'botType'] }
+  ]
 });
 
 // ConversationTag junction table for many-to-many relationship
@@ -222,6 +294,21 @@ export const ConversationTag = sequelize.define('ConversationTag', {
     onDelete: 'CASCADE',
     primaryKey: true,
   },
+  createdAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW
+  }
+}, {
+  indexes: [
+    { fields: ['conversationId'] },
+    { fields: ['tagId'] }
+  ]
 });
 
 // Define associations

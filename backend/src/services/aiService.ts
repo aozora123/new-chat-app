@@ -1,12 +1,122 @@
 /**
  * Simple AI service to generate bot responses based on message content and bot personality
+ * Includes caching mechanism to avoid redundant API calls
  */
 
-export const generateAIResponse = async (message: string, botType: string): Promise<string> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
+// 缓存接口
+interface CacheEntry {
+  response: string;
+  timestamp: number;
+}
+
+// 缓存配置
+const CACHE_CONFIG = {
+  TTL: 5 * 60 * 1000, // 缓存过期时间：5分钟（毫秒）
+  MAX_SIZE: 1000, // 最大缓存条目数
+  ENABLED: true // 是否启用缓存
+};
+
+// 内存缓存存储
+const responseCache = new Map<string, CacheEntry>();
+
+// 生成缓存键
+const generateCacheKey = (message: string, botType: string): string => {
+  const normalizedMessage = message.trim().toLowerCase();
+  return `${botType}:${normalizedMessage}`;
+};
+
+// 清理过期缓存
+const cleanupExpiredCache = (): void => {
+  const now = Date.now();
+  const expiredKeys: string[] = [];  
+  for (const [key, entry] of responseCache.entries()) {
+    if (now - entry.timestamp > CACHE_CONFIG.TTL) {
+      expiredKeys.push(key);
+    }
+  }
   
-  // Define responses based on bot personality
+  expiredKeys.forEach(key => responseCache.delete(key));
+  
+  if (expiredKeys.length > 0) {
+    console.log(`Cleaned up ${expiredKeys.length} expired cache entries`);
+  }
+};
+
+// 限制缓存大小
+const limitCacheSize = (): void => {
+  if (responseCache.size > CACHE_CONFIG.MAX_SIZE) {
+    const entries = Array.from(responseCache.entries());
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    
+    const removeCount = responseCache.size - CACHE_CONFIG.MAX_SIZE;
+    for (let i = 0; i < removeCount; i++) {
+      responseCache.delete(entries[i][0]);
+    }
+    
+    console.log(`Limited cache size by removing ${removeCount} oldest entries`);
+  }
+};
+
+// 获取缓存的响应
+const getCachedResponse = (message: string, botType: string): string | null => {
+  if (!CACHE_CONFIG.ENABLED) {
+    return null;
+  }
+  
+  const key = generateCacheKey(message, botType);
+  const entry = responseCache.get(key);
+  
+  if (entry && Date.now() - entry.timestamp < CACHE_CONFIG.TTL) {
+    console.log(`Cache hit for key: ${key.substring(0, 50)}...`);
+    return entry.response;
+  }
+  
+  return null;
+};
+
+// 缓存响应
+const cacheResponse = (message: string, botType: string, response: string): void => {
+  if (!CACHE_CONFIG.ENABLED) {
+    return;
+  }
+  
+  const key = generateCacheKey(message, botType);
+  responseCache.set(key, {
+    response,
+    timestamp: Date.now()
+  });
+  
+  limitCacheSize();
+  console.log(`Cached response for key: ${key.substring(0, 50)}...`);
+};
+
+// 获取缓存统计信息
+export const getCacheStats = () => {
+  return {
+    size: responseCache.size,
+    maxSize: CACHE_CONFIG.MAX_SIZE,
+    ttl: CACHE_CONFIG.TTL / 1000 / 60, // 转换为分钟
+    enabled: CACHE_CONFIG.ENABLED
+  };
+};
+
+// 清空缓存
+export const clearCache = (): void => {
+  responseCache.clear();
+  console.log('Cache cleared');
+};
+
+export const generateAIResponse = async (message: string, botType: string): Promise<string> => {
+  // 检查缓存
+  const cachedResponse = getCachedResponse(message, botType);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+  
+  // 模拟API调用延迟（已优化为最小延迟）
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // 定义基于机器人个性的回复
   const responses: Record<string, string[]> = {
     // 预设机器人角色类型
     customer_service: [
@@ -78,15 +188,23 @@ export const generateAIResponse = async (message: string, botType: string): Prom
     `关于"${message}"，我需要更多信息才能给出完整的回答。请问您能提供更多细节吗？`
   ];
 
-  // Get responses for the specified bot type, or use defaults
+  // 获取指定机器人类型的回复，或使用默认回复
   const availableResponses = responses[botType] || defaultResponses;
   
   try {
-    // Return a randomly selected response
-    return availableResponses[Math.floor(Math.random() * availableResponses.length)];
+    // 返回随机选择的回复
+    const response = availableResponses[Math.floor(Math.random() * availableResponses.length)];
+    
+    // 缓存响应
+    cacheResponse(message, botType, response);
+    
+    return response;
   } catch (error) {
     // 确保即使出错也能返回一个默认回复
     console.error('Error generating AI response:', error);
     return `我已经收到了您的消息："${message}"。如果您有任何问题，随时告诉我！`;
   }
 };
+
+// 定期清理过期缓存（每10分钟执行一次）
+setInterval(cleanupExpiredCache, 10 * 60 * 1000);
