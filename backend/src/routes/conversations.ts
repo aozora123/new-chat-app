@@ -24,6 +24,8 @@ import {
 const router = Router();
 
 router.get('/', authenticateToken, getConversations);
+// 静态路由必须在动态路由之前定义
+router.get('/bots/roles', authenticateToken, getBotRoles);
 router.get('/:id', getConversationByIdValidation, authenticateToken, getConversationById);
 router.post('/', createConversationValidation, authenticateToken, createConversation);
 router.put('/:id', updateConversationValidation, authenticateToken, updateConversation);
@@ -32,6 +34,5 @@ router.post('/:id/members', addMemberToGroupValidation, authenticateToken, addMe
 router.post('/:id/bots', addBotToGroupValidation, authenticateToken, addBotToGroup);
 router.post('/:id/tags', addTagToConversationValidation, authenticateToken, addTagToConversation);
 router.delete('/:id/tags', removeTagFromConversationValidation, authenticateToken, removeTagFromConversation);
-router.get('/bots/roles', authenticateToken, getBotRoles);
 
 export default router;
