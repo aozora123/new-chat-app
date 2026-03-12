@@ -21,6 +21,7 @@
             <input
               v-else
               v-model="editTitle"
+              ref="editInputRef"
               @keyup.enter="saveTitle(conversation)"
               @blur="saveTitle(conversation)"
               class="edit-title-input"
@@ -341,6 +342,7 @@ const newTagName = ref('');
 const newTagColor = ref('#4a6cf7');
 const editingId = ref<number | null>(null);
 const editTitle = ref('');
+const editInputRef = ref<HTMLInputElement | null>(null);
 const showAddMemberForm = ref(false);
 const memberToAddId = ref<number | null>(null);
 const memberToAddIdText = ref<string>('');
@@ -441,9 +443,13 @@ const selectConversation = async (conversation: any) => {
   await chatStore.loadConversation(conversation.id);
 };
 
-const startEdit = (conversation: any) => {
+const startEdit = async (conversation: any) => {
   editingId.value = conversation.id;
   editTitle.value = conversation.title;
+  await nextTick();
+  if (editInputRef.value) {
+    editInputRef.value.focus();
+  }
 };
 
 const saveTitle = async (conversation: any) => {
@@ -452,7 +458,6 @@ const saveTitle = async (conversation: any) => {
       console.log('Updating conversation title:', editTitle.value);
       await chatStore.updateConversationTitle(conversation.id, editTitle.value);
       console.log('Title updated successfully');
-      await chatStore.loadConversations(); // Refresh the list
     } catch (error) {
       console.error('Failed to update conversation title:', error);
       editTitle.value = conversation.title; // Revert on error
@@ -469,12 +474,6 @@ const deleteConversation = async (id: number) => {
       console.log('Attempting to delete conversation with ID:', id);
       await chatStore.deleteConversation(id);
       console.log('Conversation deleted successfully');
-      await chatStore.loadConversations(); // Refresh the list
-      
-      // If the deleted conversation was the current one, clear it
-      if (chatStore.currentConversation?.id === id) {
-        chatStore.setCurrentConversation(null as any);
-      }
     } catch (error) {
       console.error('Failed to delete conversation:', error);
       alert('Failed to delete conversation: ' + (error as Error).message);
@@ -1204,12 +1203,6 @@ onUnmounted(() => {
   color: #4a6cf7;
   font-weight: 600;
   box-shadow: 0 4px 15px rgba(74, 108, 247, 0.15);
-}
-
-.conversation-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
 .group-indicator {

@@ -193,8 +193,21 @@ export const addTagToConversation = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    if (conversation.userId !== userId) {
+    if (conversation.userId !== userId && !conversation.isGroup) {
       return res.status(403).json({ error: 'Access forbidden' });
+    }
+
+    if (conversation.isGroup) {
+      const isMember = await GroupMember.findOne({
+        where: {
+          conversationId: parseInt(id),
+          userId,
+          memberType: 'human'
+        }
+      });
+      if (!isMember && conversation.userId !== userId) {
+        return res.status(403).json({ error: 'Access forbidden' });
+      }
     }
 
     const tag = await Tag.findByPk(tagId);
@@ -249,8 +262,21 @@ export const removeTagFromConversation = async (req: Request, res: Response) => 
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    if (conversation.userId !== userId) {
+    if (conversation.userId !== userId && !conversation.isGroup) {
       return res.status(403).json({ error: 'Access forbidden' });
+    }
+
+    if (conversation.isGroup) {
+      const isMember = await GroupMember.findOne({
+        where: {
+          conversationId: parseInt(id),
+          userId,
+          memberType: 'human'
+        }
+      });
+      if (!isMember && conversation.userId !== userId) {
+        return res.status(403).json({ error: 'Access forbidden' });
+      }
     }
 
     await ConversationTag.destroy({
@@ -295,9 +321,21 @@ export const getConversationById = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    // Only allow users to access their own conversations
     if (conversation.userId !== userId && !conversation.isGroup) {
       return res.status(403).json({ error: 'Access forbidden' });
+    }
+
+    if (conversation.isGroup) {
+      const isMember = await GroupMember.findOne({
+        where: {
+          conversationId: parseInt(id),
+          userId,
+          memberType: 'human'
+        }
+      });
+      if (!isMember && conversation.userId !== userId) {
+        return res.status(403).json({ error: 'Access forbidden' });
+      }
     }
 
     res.json(conversation);
@@ -358,8 +396,21 @@ export const updateConversation = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    if (conversation.userId !== userId) {
+    if (conversation.userId !== userId && !conversation.isGroup) {
       return res.status(403).json({ error: 'Access forbidden' });
+    }
+
+    if (conversation.isGroup) {
+      const isMember = await GroupMember.findOne({
+        where: {
+          conversationId: parseInt(id),
+          userId,
+          memberType: 'human'
+        }
+      });
+      if (!isMember && conversation.userId !== userId) {
+        return res.status(403).json({ error: 'Access forbidden' });
+      }
     }
 
     await conversation.update({ title });
@@ -390,8 +441,21 @@ export const deleteConversation = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    if (conversation.userId !== userId) {
+    if (conversation.userId !== userId && !conversation.isGroup) {
       return res.status(403).json({ error: 'Access forbidden' });
+    }
+
+    if (conversation.isGroup) {
+      const isMember = await GroupMember.findOne({
+        where: {
+          conversationId: parseInt(id),
+          userId,
+          memberType: 'human'
+        }
+      });
+      if (!isMember && conversation.userId !== userId) {
+        return res.status(403).json({ error: 'Access forbidden' });
+      }
     }
 
     // Delete associated records first
@@ -443,8 +507,21 @@ export const addMemberToGroup = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    if (conversation.userId !== userId) {
+    if (conversation.userId !== userId && !conversation.isGroup) {
       return res.status(403).json({ error: 'Access forbidden' });
+    }
+
+    if (conversation.isGroup) {
+      const isMember = await GroupMember.findOne({
+        where: {
+          conversationId: parseInt(id),
+          userId,
+          memberType: 'human'
+        }
+      });
+      if (!isMember && conversation.userId !== userId) {
+        return res.status(403).json({ error: 'Access forbidden' });
+      }
     }
 
     // If it's not a group, convert it to a group
@@ -501,8 +578,21 @@ export const addBotToGroup = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    if (conversation.userId !== userId) {
+    if (conversation.userId !== userId && !conversation.isGroup) {
       return res.status(403).json({ error: 'Access forbidden' });
+    }
+
+    if (conversation.isGroup) {
+      const isMember = await GroupMember.findOne({
+        where: {
+          conversationId: parseInt(id),
+          userId,
+          memberType: 'human'
+        }
+      });
+      if (!isMember && conversation.userId !== userId) {
+        return res.status(403).json({ error: 'Access forbidden' });
+      }
     }
 
     // If it's not a group, convert it to a group

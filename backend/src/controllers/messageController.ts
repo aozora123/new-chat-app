@@ -141,6 +141,23 @@ export const getMessages = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access forbidden' });
     }
 
+    if (conversation.isGroup) {
+      const isMember = await GroupMember.findOne({
+        where: {
+          conversationId,
+          userId,
+          memberType: 'human'
+        }
+      });
+      if (!isMember && conversation.userId !== userId) {
+        logger.warn('Access forbidden - not a group member', {
+          conversationId,
+          userId
+        });
+        return res.status(403).json({ error: 'Access forbidden' });
+      }
+    }
+
     const messages = await Message.findAll({
       where: { conversationId },
       order: [['createdAt', 'ASC']],
@@ -179,6 +196,19 @@ export const createMessage = async (req: Request, res: Response) => {
 
     if (conversation.userId !== userId && !conversation.isGroup) {
       return res.status(403).json({ error: 'Access forbidden' });
+    }
+
+    if (conversation.isGroup) {
+      const isMember = await GroupMember.findOne({
+        where: {
+          conversationId,
+          userId,
+          memberType: 'human'
+        }
+      });
+      if (!isMember && conversation.userId !== userId) {
+        return res.status(403).json({ error: 'Access forbidden' });
+      }
     }
 
     // 检查是否为机器人消息
