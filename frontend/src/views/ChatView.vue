@@ -1206,12 +1206,6 @@ onUnmounted(() => {
   box-shadow: 0 4px 15px rgba(74, 108, 247, 0.15);
 }
 
-.conversation-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .group-indicator {
   font-size: 0.8rem;
 }
