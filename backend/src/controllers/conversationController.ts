@@ -358,7 +358,22 @@ export const updateConversation = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    if (conversation.userId !== userId) {
+    // Check if user is the creator or a member of the group
+    const isCreator = conversation.userId === userId;
+    let isMember = false;
+    
+    if (conversation.isGroup) {
+      const groupMember = await GroupMember.findOne({
+        where: {
+          conversationId: parseInt(id),
+          userId: userId,
+          memberType: 'human'
+        }
+      });
+      isMember = !!groupMember;
+    }
+    
+    if (!isCreator && !isMember) {
       return res.status(403).json({ error: 'Access forbidden' });
     }
 
@@ -394,26 +409,31 @@ export const deleteConversation = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access forbidden' });
     }
 
-    // Delete associated records first
+    // Delete associated records using transaction for data consistency
     const conversationId = parseInt(id);
-    
-    // Delete all messages in this conversation
-    await Message.destroy({
-      where: { conversationId }
-    });
 
-    // Delete all group members
-    await GroupMember.destroy({
-      where: { conversationId }
-    });
+    await sequelize.transaction(async (t) => {
+      // Delete all messages in this conversation
+      await Message.destroy({
+        where: { conversationId },
+        transaction: t
+      });
 
-    // Delete all conversation-tag associations
-    await ConversationTag.destroy({
-      where: { conversationId }
-    });
+      // Delete all group members
+      await GroupMember.destroy({
+        where: { conversationId },
+        transaction: t
+      });
 
-    // Finally, delete the conversation
-    await conversation.destroy();
+      // Delete all conversation-tag associations
+      await ConversationTag.destroy({
+        where: { conversationId },
+        transaction: t
+      });
+
+      // Finally, delete the conversation
+      await conversation.destroy({ transaction: t });
+    });
 
     res.json({ message: 'Conversation deleted successfully' });
   } catch (error: any) {
